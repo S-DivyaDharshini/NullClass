@@ -1,0 +1,26 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+file_path = 'googleplaystore.csv (2).zip' 
+df = pd.read_csv(file_path)
+print(df.head())
+print(df.info())
+df = df.dropna() 
+df['Installs'] = df['Installs'].str.replace('[+,]', '', regex=True).astype(int) 
+df['Last Updated'] = pd.to_datetime(df['Last Updated']) 
+filtered_df = df[(df['Content Rating'] == 'Teen') & (df['App'].str.startswith('E')) & (df['Installs'] > 10000)]
+time_series_df = (filtered_df.groupby(['Category', pd.Grouper(key='Last Updated', freq='M')]).agg({'Installs': 'sum'}).reset_index())
+time_series_df['MoM Growth'] = (time_series_df.groupby('Category')['Installs'].pct_change() * 100)
+plt.figure(figsize=(12, 6))
+for category in time_series_df['Category'].unique():
+    category_data = time_series_df[time_series_df['Category'] == category]
+    plt.plot(category_data['Last Updated'], category_data['Installs'], label=category)
+    for i in range(1, len(category_data)):
+        if category_data['MoM Growth'].iloc[i] > 20:
+            plt.fill_between(
+                [category_data['Last Updated'].iloc[i - 1], category_data['Last Updated'].iloc[i]],0,
+                [category_data['Installs'].iloc[i - 1], category_data['Installs'].iloc[i]],color='orange',alpha=0.3)
+plt.title('Trend of Installs by App Category')
+plt.xlabel('Date')
+plt.ylabel('Total Installs')
+plt.legend()
+plt.show()
