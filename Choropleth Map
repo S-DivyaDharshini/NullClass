@@ -1,0 +1,45 @@
+import pandas as pd
+import plotly.express as px
+from datetime import datetime
+import pytz
+data_path = 'googleplaystore.csv.zip'
+df = pd.read_csv(data_path)
+df = df[df['Installs'].notna()]
+df = df[df['Installs'].notna()]
+df['Installs'] = df['Installs'].apply(lambda x: str(x).replace(',', '').replace('+', '') if isinstance(x, str) else x)
+df['Installs'] = pd.to_numeric(df['Installs'], errors='coerce')  
+df = df[df['Installs'].notna()]  
+df['Installs'] = df['Installs'].astype(int)  
+countries = ["India", "United States", "Brazil", "Germany", "Canada"]
+df['Country'] = (countries * ((len(df) // len(countries)) + 1))[:len(df)]
+df = df[['Category', 'Installs', 'Country']]
+filtered_df = df[df['Installs'] > 1000000]
+filtered_df = filtered_df[~filtered_df['Category'].str.startswith(tuple('ACGS'))]
+filtered_df = filtered_df.nlargest(5, 'Installs')
+def is_time_in_range():
+    ist = pytz.timezone("Asia/Kolkata")
+    current_time = datetime.now(ist).time()
+    start_time = datetime.strptime("18:00", "%H:%M").time()
+    end_time = datetime.strptime("20:00", "%H:%M").time()
+    return start_time <= current_time <= end_time
+if is_time_in_range():
+    fig = px.choropleth(
+        filtered_df,
+        locations="Country",
+        locationmode="country names",
+        color="Installs",
+        hover_name="Category",
+        color_continuous_scale=px.colors.sequential.Plasma,
+        title="Global Installs by Top Categories",
+    )
+    fig.update_layout(
+        title_font_size=20,
+        geo=dict(
+            showframe=False,
+            showcoastlines=False,
+            projection_type="equirectangular",
+        ),
+    )
+    fig.show()
+else:
+    print("The choropleth map is only available between 6 PM and 8 PM IST.")
